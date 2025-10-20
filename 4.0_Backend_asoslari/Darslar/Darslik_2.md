@@ -160,134 +160,229 @@ SELECT * FROM todos;
 <hr>
 
 <details>
-    <summary>Node.js orqali SQLite bilan ishlash</summary>
+    <summary>SQLite asoslari — Ma'lumotlar bazasi bilan ishlash</summary>
 
 ## 🗓️ 5-hafta — 2-dars
 
-### 🏷️ Mavzu: **Node.js orqali SQLite bilan ishlash**
+### 🏷️ Mavzu: **SQLite asoslari — Ma'lumotlar bazasi bilan ishlash**
 
 ---
 
-### 1️⃣ Nega biz endi Node’dan SQLite bilan bog‘laymiz?
+### 1️⃣ SQLite nima va nega kerak?
 
-Oldingi darsda biz SQLite’ni bevosita terminal yoki VS Code extension orqali ishlatdik.
-Ammo **backend server** yozayotganimizda, ma’lumotlarni **koddan turib** qo‘shish, o‘chirish, o‘qish kerak bo‘ladi.
-Bugun Node.js’dan to‘g‘ridan-to‘g‘ri SQLite bilan ishlashni o‘rganamiz.
+**SQLite** — bu juda oddiy va kuchli ma'lumotlar bazasi tizimi.
 
----
+* **Bitta fayl** — butun ma'lumotlar bazasi `.db` faylida saqlanadi
+* **Server kerak emas** — kompyuteringizda to'g'ridan-to'g'ri ishlaydi
+* **Tez va ishonchli** — kichik va o'rta loyihalar uchun ideal
 
-### 2️⃣ better-sqlite3 nima?
-
-Node.js uchun SQLite bilan ishlashga yordam beradigan kutubxona.
-
-* Tez va sodda.
-* Promiseless (async/await kerak emas — lekin oddiy ishlash uchun juda yaxshi).
-* Kichik loyihalar uchun juda qulay.
+**Nima uchun SQLite?**
+- Oddiy: Fayl ochish kabi osongina
+- Tez: Ma'lumotlarni tezda o'qish va yozish
+- Xavfsiz: Ma'lumotlar yo'qolmaydi
 
 ---
 
-### 3️⃣ better-sqlite3 o‘rnatish
+### 2️⃣ SQL asoslari — Ma'lumotlar bazasi tili
 
-Terminalda:
+**SQL** — bu ma'lumotlar bazasi bilan gaplashish tili. Keling, asosiy buyruqlarni o'rganamiz:
+
+#### CREATE TABLE — Jadval yaratish
+```sql
+CREATE TABLE todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  completed BOOLEAN DEFAULT 0
+);
+```
+
+**Nima qiladi:**
+- `id` — har bir yozuvning raqami (avtomatik)
+- `title` — vazifa nomi (majburiy)
+- `completed` — bajarilganligi (0 = yo'q, 1 = ha)
+
+#### INSERT — Ma'lumot qo'shish
+```sql
+INSERT INTO todos (title, completed) VALUES ('Kitob o''qish', 0);
+INSERT INTO todos (title, completed) VALUES ('Uy vazifasi', 1);
+```
+
+#### SELECT — Ma'lumot o'qish
+```sql
+-- Barcha yozuvlarni olish
+SELECT * FROM todos;
+
+-- Faqat bajarilgan vazifalar
+SELECT * FROM todos WHERE completed = 1;
+
+-- Bitta yozuv (ID bo'yicha)
+SELECT * FROM todos WHERE id = 1;
+```
+
+#### UPDATE — Ma'lumot yangilash
+```sql
+UPDATE todos SET completed = 1 WHERE id = 1;
+UPDATE todos SET title = 'Yangi nom' WHERE id = 2;
+```
+
+#### DELETE — Ma'lumot o'chirish
+```sql
+DELETE FROM todos WHERE id = 1;
+DELETE FROM todos WHERE completed = 1;
+```
+
+---
+
+### 3️⃣ VS Code SQLite extension bilan mashq
+
+**1-qadam:** VS Code'da SQLite extension o'rnating
+**2-qadam:** `test.db` fayl yarating
+**3-qadam:** Quyidagi SQL kodlarini yozing:
+
+```sql
+-- Jadval yaratish
+CREATE TABLE students (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  age INTEGER,
+  grade TEXT
+);
+
+-- Ma'lumot qo'shish
+INSERT INTO students (name, age, grade) VALUES ('Ali', 14, '7A');
+INSERT INTO students (name, age, grade) VALUES ('Aziza', 13, '7B');
+INSERT INTO students (name, age, grade) VALUES ('Sardor', 15, '8A');
+
+-- Ma'lumotlarni ko'rish
+SELECT * FROM students;
+
+-- Qidiruv
+SELECT * FROM students WHERE grade = '7A';
+SELECT * FROM students WHERE age > 14;
+```
+
+**Natija:**
+```
+id | name   | age | grade
+1  | Ali    | 14  | 7A
+2  | Aziza  | 13  | 7B  
+3  | Sardor | 15  | 8A
+```
+
+---
+
+### 4️⃣ better-sqlite3 — Node.js uchun SQLite
+
+**Nima kerak:** Node.js dasturidan SQLite bilan ishlash uchun maxsus kutubxona.
 
 ```bash
 npm install better-sqlite3
 ```
 
-✅ Shu bilan loyihamizga kutubxona qo‘shildi.
-
----
-
-### 4️⃣ Yangi fayl: `db.js`
-
-Biz alohida `db.js` fayli yaratib, SQLite ulanishini shu yerga yozamiz.
-
+**Asosiy ishlatish:**
 ```javascript
-// db.js
 import Database from 'better-sqlite3';
 
-const db = new Database('todos.db'); // fayl nomi: todos.db (agar bo‘lmasa, avtomatik yaratiladi)
+// Ma'lumotlar bazasini ochish
+const db = new Database('students.db');
 
-// 1. Agar jadval yo‘q bo‘lsa — yaratamiz
+// Jadval yaratish
 db.prepare(`
-  CREATE TABLE IF NOT EXISTS todos (
+  CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    completed BOOLEAN DEFAULT 0
+    name TEXT NOT NULL,
+    age INTEGER,
+    grade TEXT
   )
 `).run();
+
+// Ma'lumot qo'shish
+const insertStudent = db.prepare('INSERT INTO students (name, age, grade) VALUES (?, ?, ?)');
+insertStudent.run('Dilshod', 14, '7A');
+
+// Ma'lumot o'qish
+const students = db.prepare('SELECT * FROM students').all();
+console.log(students);
 
 export default db;
 ```
 
-✅ Bu kod shuni qiladi:
+---
 
-* `todos.db` faylini ochadi yoki yaratadi.
-* Ichida `todos` jadvali bor-yo‘qligini tekshiradi, bo‘lmasa yaratadi.
+### 5️⃣ Amaliy mashq — Maktab kutubxonasi
+
+**Vazifa:** O'quvchilar ro'yxati uchun ma'lumotlar bazasi yarating.
+
+**Jadval maydonlari:**
+- `id` — raqam (avtomatik)
+- `name` — ism (majburiy)
+- `class` — sinf (majburiy)
+- `book_count` — kitoblar soni (default: 0)
+
+```sql
+CREATE TABLE library (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  class TEXT NOT NULL,
+  book_count INTEGER DEFAULT 0
+);
+```
+
+**Mashq:**
+1. 5 ta o'quvchi qo'shing
+2. Barcha 7-sinf o'quvchilarini toping
+3. Eng ko'p kitob olgan o'quvchini toping
+4. Bir o'quvchining kitoblar sonini yangilang
 
 ---
 
-### 5️⃣ Node.js orqali ma’lumot yozish (INSERT)
+### 6️⃣ SQL qo'shimcha imkoniyatlari
 
-`server.js` faylida yoki sinov uchun alohida faylda yozamiz:
+#### ORDER BY — Tartiblash
+```sql
+-- Ism bo'yicha alfavit tartibda
+SELECT * FROM students ORDER BY name;
 
-```javascript
-import db from './db.js';
-
-// Ma’lumot qo‘shish (INSERT)
-const insert = db.prepare('INSERT INTO todos (title, completed) VALUES (?, ?)');
-insert.run('Uy vazifasini qilish', false);
-insert.run('Kitob o‘qish', true);
-
-console.log('Ma’lumot qo‘shildi!');
+-- Yosh bo'yicha katta-kichik tartibda
+SELECT * FROM students ORDER BY age DESC;
 ```
 
-✅ `?` belgisi o‘rniga keyinchalik qiymatlar qo‘yiladi (`title`, `completed`).
+#### LIMIT — Cheklash
+```sql
+-- Faqat birinchi 3 ta yozuv
+SELECT * FROM students LIMIT 3;
+
+-- Eng yosh 2 ta o'quvchi
+SELECT * FROM students ORDER BY age LIMIT 2;
+```
+
+#### COUNT, SUM, AVG — Hisoblash
+```sql
+-- Umumiy o'quvchilar soni
+SELECT COUNT(*) FROM students;
+
+-- O'rtacha yosh
+SELECT AVG(age) FROM students;
+
+-- Eng katta yosh
+SELECT MAX(age) FROM students;
+```
 
 ---
 
-### 6️⃣ Ma’lumot o‘qish (SELECT)
+### 7️⃣ Keyingi qadam — Express bilan birlashtirish
 
-```javascript
-// SELECT — barchasini olish
-const rows = db.prepare('SELECT * FROM todos').all();
-console.log(rows);
-```
+Endi biz SQLite asoslarini o'rgandik. Keyingi darsda bu bilimlarni **Express API** bilan birlashtirib, haqiqiy web server yaratamiz.
 
-Terminalda ishga tushiring:
+**Nima o'rgandik:**
+- SQLite nima va qanday ishlaydi
+- SQL asosiy buyruqlari (CREATE, INSERT, SELECT, UPDATE, DELETE)
+- VS Code extension bilan ishlash
+- better-sqlite3 kutubxonasi
+- Ma'lumotlarni tartiblash va hisoblash
 
-```bash
-node server.js
-```
-
-Natija:
-
-```bash
-[
-  { id: 1, title: 'Uy vazifasini qilish', completed: 0 },
-  { id: 2, title: 'Kitob o‘qish', completed: 1 }
-]
-```
-
-> Eslatma: SQLite’da `BOOLEAN` asosan `0` yoki `1` ko‘rinishida saqlanadi.
-
----
-
-### 7️⃣ Parametr bilan SELECT
-
-Agar faqat bitta todo’ni olish kerak bo‘lsa:
-
-```javascript
-const getOne = db.prepare('SELECT * FROM todos WHERE id = ?');
-const todo = getOne.get(1); // id = 1 bo‘lgan todo
-console.log(todo);
-```
-
-Natija:
-
-```bash
-{ id: 1, title: 'Uy vazifasini qilish', completed: 0 }
-```
+**Keyingi darsda:**
+- Express server + SQLite = Kuchli API! 🚀
 
 ---
 
@@ -317,11 +412,12 @@ Keyingi darsda bu kodni **Express serveriga bog‘lab**, `GET /todos`, `POST /to
 
 ### Asosiy tushunchalar
 
-* **better-sqlite3** — Node.js uchun sodda va tez SQLite kutubxonasi.
-* **CREATE TABLE IF NOT EXISTS** — jadval yo‘q bo‘lsa yaratadi.
-* **INSERT** — ma’lumot qo‘shish.
-* **SELECT** — ma’lumot o‘qish (`all()` barcha, `get()` bitta yozuv uchun).
-* `?` — SQL so‘rovda parametr qo‘yish uchun xavfsiz usul.
+* **SQLite** — oddiy va tez ma'lumotlar bazasi
+* **SQL** — ma'lumotlar bazasi bilan gaplashish tili
+* **CREATE TABLE** — jadval yaratish
+* **INSERT/SELECT/UPDATE/DELETE** — ma'lumotlar bilan ishlash
+* **better-sqlite3** — Node.js uchun SQLite kutubxonasi
+* **ORDER BY, LIMIT, COUNT** — qo'shimcha imkoniyatlar
 
 ---
 </details>
@@ -329,41 +425,46 @@ Keyingi darsda bu kodni **Express serveriga bog‘lab**, `GET /todos`, `POST /to
 <hr>
 
 <details>
-    <summary>Express API’ni lowdb’dan SQLite’ga o‘tkazish</summary>
+    <summary>Express + SQLite — To'liq API yaratish</summary>
 
 ## 🗓️ 5-hafta — 3-dars
 
-### 🏷️ Mavzu: **Express API’ni lowdb’dan SQLite’ga o‘tkazish**
+### 🏷️ Mavzu: **Express + SQLite — To'liq API yaratish**
 
 ---
 
 ### 🎯 Maqsad
 
-Oldingi darsda biz Node orqali **SQLite** bilan ishlashni o‘rgandik.
-Bugun “Todos API”ni lowdb o‘rniga **SQLite** bilan ishlaydigan qilamiz.
+Oldingi darsda biz **SQLite** asoslarini o'rgandik.
+Bugun bu bilimlarni **Express** bilan birlashtirib, to'liq ishlaydigan API yaratamiz.
 
 ✅ Natijada:
 
-* API endi haqiqiy ma’lumotlar bazasi bilan ishlaydi.
-* Ma’lumotlar server o‘chib qayta yoqilganda ham saqlanib qoladi.
-* Bizning kod professionalroq bo‘lib qoladi.
+* Express server + SQLite database = Kuchli kombinatsiya!
+* Ma'lumotlar server o'chib qayta yoqilganda ham saqlanib qoladi.
+* Haqiqiy backend dasturchi bo'lasiz! 🚀
 
 ---
 
-### 1️⃣ Avvalgi lowdb kodimiz
+### 1️⃣ Loyihani tayyorlash
 
-Oldin shunday edi:
+Avval loyihamizni tayyorlaymiz:
 
-```javascript
-import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
-const adapter = new JSONFile('db.json')
-const db = new Low(adapter, { todos: [] })
-await db.read()
-db.data ||= { todos: [] }
+```bash
+npm init -y
+npm install express better-sqlite3
 ```
 
-Endi lowdb kerak emas — o‘rniga **better-sqlite3** va `db.js` dan foydalanamiz.
+`package.json` faylida:
+```json
+{
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  }
+}
+```
 
 ---
 
